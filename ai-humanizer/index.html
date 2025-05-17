@@ -201,5 +201,25 @@
             document.getElementById(elementId).style.width = `${percentage}%`;
         }
     </script>
+
+    <script>
+console.log("Script loaded successfully!");
+
+async function testProcessing() {
+    try {
+        console.log("Testing humanization...");
+        const testResult = await processText('humanize');
+        console.log("Test result:", testResult);
+    } catch (error) {
+        console.error("Error in processing:", error);
+    }
+}
+
+// Run test automatically
+window.addEventListener('load', () => {
+    testProcessing();
+});
+</script>
+    
 </body>
 </html>
