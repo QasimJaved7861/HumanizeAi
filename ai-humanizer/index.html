@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced AI Humanizer</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.87/dist/themes/light.css">
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --secondary: #50e3c2;
+        }
+        
+        .advanced-panel {
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .detection-method {
+            border-left: 3px solid var(--primary);
+            padding-left: 1rem;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Settings Panel -->
+        <div class="advanced-panel p-4 mb-4">
+            <h3>🛠️ Advanced Settings</h3>
+            <div class="grid">
+                <sl-select label="Paraphrase Intensity" value="medium">
+                    <sl-option value="light">Light Rewriting</sl-option>
+                    <sl-option value="medium">Medium Rewriting</sl-option>
+                    <sl-option value="heavy">Heavy Rewriting</sl-option>
+                </sl-select>
+                
+                <sl-checkbox checked>Enable Context Awareness</sl-checkbox>
+                <sl-checkbox checked>Use Semantic Analysis</sl-checkbox>
+            </div>
+        </div>
+
+        <!-- Enhanced Paraphrasing Section -->
+        <div class="advanced-panel p-4 mb-4">
+            <div class="grid">
+                <textarea id="inputText" class="form-control" 
+                    rows="8" placeholder="Enter text to humanize..."></textarea>
+                
+                <sl-button variant="primary" onclick="processText()">
+                    <sl-icon name="magic"></sl-icon> Humanize Text
+                </sl-button>
+            </div>
+        </div>
+
+        <!-- Multi-Method Detection Results -->
+        <div id="results" class="advanced-panel p-4">
+            <div class="detection-method">
+                <h4>GLTR Analysis <sl-badge variant="primary">Academic</sl-badge></h4>
+                <div id="gltrResult" class="detection-bar"></div>
+            </div>
+            
+            <div class="detection-method">
+                <h4>Statistical Analysis <sl-badge variant="success">Patterns</sl-badge></h4>
+                <div id="statisticalResult" class="detection-bar"></div>
+            </div>
+            
+            <div class="detection-method">
+                <h4>Neural Network Detection <sl-badge variant="warning">AI Model</sl-badge></h4>
+                <div id="nnResult" class="detection-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced AI Models -->
+    <script type="module">
+        import { tf } from 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js';
+        import { load } from 'https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder@1.3.3';
+        import { nlp } from 'https://cdn.jsdelivr.net/npm/compromise@14.6.0/builds/compromise.mjs';
+
+        // Enhanced Paraphrasing Models
+        const PARAPHRASE_MODELS = {
+            light: 'https://tfhub.dev/google/paraphrase-minilm-l6-v2/1',
+            medium: 'https://tfhub.dev/google/bert_ed24_en_uncased_L-6_H-512_A-8/1',
+            heavy: 'https://tfhub.dev/google/pegasus_xsum/1'
+        };
+
+        // Multiple Detection Models
+        const DETECTION_MODELS = {
+            gltr: 'https://gltr.io/api/analyze',
+            openai: 'https://openai-openai-detector.hf.space/api/v0/detect',
+            gpt2: 'https://api-inference.huggingface.co/models/gpt2-detector'
+        };
+
+        class AIHumanizer {
+            constructor() {
+                this.paraphraseModel = null;
+                this.detectionModels = {};
+                this.loadModels();
+            }
+
+            async loadModels() {
+                // Load paraphrase model
+                this.paraphraseModel = await tf.loadGraphModel(PARAPHRASE_MODELS.medium);
+                
+                // Load detection models
+                this.detectionModels = {
+                    sentenceEncoder: await load(),
+                    statistical: true
+                };
+            }
+
+            async advancedParaphrase(text) {
+                // Rule-based preprocessing
+                let doc = nlp(text);
+                doc = this.applyRewriteRules(doc);
+                
+                // Neural paraphrasing
+                const neuralResult = await this.neuralParaphrase(doc.text());
+                
+                // Post-processing
+                return this.postProcess(neuralResult);
+            }
+
+            applyRewriteRules(doc) {
+                return doc
+                    .replace('however', 'but')
+                    .replace('furthermore', 'also')
+                    .replace(/([A-Z])/g, (m) => m.toLowerCase())
+                    .sentences()
+                    .toPresentTense();
+            }
+
+            async neuralParaphrase(text) {
+                const embeddings = await this.paraphraseModel.embed(text);
+                return this.paraphraseModel.predict(embeddings);
+            }
+
+            postProcess(text) {
+                return text.replace(/\s([,\.])/g, '$1')
+                    .replace(/\s{2,}/g, ' ')
+                    .trim();
+            }
+
+            // Multiple Detection Methods
+            async detectAIText(text) {
+                return {
+                    gltr: await this.gltrDetection(text),
+                    statistical: this.statisticalAnalysis(text),
+                    neural: await this.nnDetection(text)
+                };
+            }
+
+            async gltrDetection(text) {
+                const response = await fetch(`${DETECTION_MODELS.gltr}?text=${encodeURIComponent(text)}`);
+                return response.json();
+            }
+
+            statisticalAnalysis(text) {
+                const words = text.split(' ');
+                const wordLengths = words.map(w => w.length);
+                const avgLength = wordLengths.reduce((a,b) => a + b, 0) / words.length;
+                
+                return {
+                    burstiness: Math.std(wordLengths),
+                    avgWordLength: avgLength,
+                    sentenceVariation: this.calculateSentenceVariation(text)
+                };
+            }
+
+            async nnDetection(text) {
+                const embeddings = await this.detectionModels.sentenceEncoder.embed(text);
+                const prediction = await this.detectionModels.nnModel.predict(embeddings);
+                return prediction.data();
+            }
+        }
+
+        // Initialize AI Humanizer
+        const humanizer = new AIHumanizer();
+
+        async function processText() {
+            const input = document.getElementById('inputText').value;
+            const paraphrased = await humanizer.advancedParaphrase(input);
+            const detection = await humanizer.detectAIText(paraphrased);
+            
+            displayResults(paraphrased, detection);
+        }
+
+        function displayResults(text, detection) {
+            // Update UI with multiple detection results
+            updateDetectionBar('gltrResult', detection.gltr.total_logprob);
+            updateDetectionBar('statisticalResult', detection.statistical.burstiness * 10);
+            updateDetectionBar('nnResult', detection.neural[0] * 100);
+            
+            document.getElementById('outputText').textContent = text;
+        }
+
+        function updateDetectionBar(elementId, score) {
+            const percentage = Math.min(Math.max(score, 0), 100);
+            document.getElementById(elementId).style.width = `${percentage}%`;
+        }
+    </script>
+</body>
+</html>
